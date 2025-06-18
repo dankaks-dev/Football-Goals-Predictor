@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,6 +7,10 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+        }
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3498db;
@@ -20,64 +24,151 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .match-row:hover {
+            background-color: #f0f8ff !important;
+            transform: translateY(-1px);
+            transition: all 0.2s;
+        }
+        .probability-high {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .probability-medium {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .probability-low {
+            color: #dc3545;
+        }
+        .live-pulse {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        .dark-mode {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        .dark-mode .match-container {
+            background-color: #2d3748;
+            color: #e2e8f0;
+        }
+        .dark-mode .match-row {
+            border-color: #4a5568;
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto p-4 max-w-4xl">
-        <h1 class="text-2xl font-bold text-center my-6">Football Goals Predictor</h1>
+<body class="min-h-screen">
+    <div class="container mx-auto p-4 max-w-6xl">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-blue-600">⚽ Football Goals Predictor</h1>
+            <button id="darkModeToggle" class="px-3 py-1 bg-gray-200 rounded-lg text-sm">Dark Mode</button>
+        </div>
         
-        <div class="flex border-b mb-6">
-            <button id="inplayTab" class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-600">
-                In-Play Matches
-            </button>
-            <button id="upcomingTab" class="px-4 py-2 font-medium text-gray-500">
-                Upcoming Matches
-            </button>
+        <div class="flex flex-wrap gap-4 mb-6">
+            <div class="flex border-b">
+                <button id="inplayTab" class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-600">
+                    In-Play Matches
+                </button>
+                <button id="upcomingTab" class="px-4 py-2 font-medium text-gray-500">
+                    Upcoming Matches
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-4 ml-auto">
+                <div>
+                    <label class="mr-2 font-medium">League:</label>
+                    <select id="leagueFilter" class="border p-1 rounded bg-white">
+                        <option value="all">All Leagues</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mr-2 font-medium">Goal Probability:</label>
+                    <select id="probabilityFilter" class="border p-1 rounded bg-white">
+                        <option value="all">All</option>
+                        <option value="70">70%+</option>
+                        <option value="50">50%+</option>
+                        <option value="30">30%+</option>
+                    </select>
+                </div>
+                <button id="refreshBtn" class="px-3 py-1 bg-blue-500 text-white rounded-lg flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
         </div>
 
         <div id="loading" class="text-center py-8 hidden">
             <div class="loader"></div>
-            <p>Loading matches...</p>
+            <p class="mt-2">Loading matches...</p>
         </div>
 
-        <div id="matchesContainer" class="bg-white rounded-lg shadow overflow-hidden">
+        <div id="errorMessage" class="hidden p-4 bg-red-100 text-red-700 rounded mb-4"></div>
+
+        <div id="matchesContainer" class="bg-white rounded-lg shadow overflow-hidden match-container">
             <!-- Matches will be inserted here by JavaScript -->
         </div>
     </div>
 
     <script>
-        const API_KEY = '2216a37711324078a6ed1cf8f22870e5'; // Replace with your actual API key
+        const API_KEY = '2216a37711324078a6ed1cf8f22870e5'; // REPLACE WITH YOUR API KEY
         let currentTab = 'inplay';
+        let allMatches = [];
+        let autoRefreshInterval;
 
-        document.getElementById('inplayTab').addEventListener('click', () => {
-            currentTab = 'inplay';
-            updateActiveTab();
+        // DOM Elements
+        const elements = {
+            inplayTab: document.getElementById('inplayTab'),
+            upcomingTab: document.getElementById('upcomingTab'),
+            loading: document.getElementById('loading'),
+            matchesContainer: document.getElementById('matchesContainer'),
+            errorMessage: document.getElementById('errorMessage'),
+            leagueFilter: document.getElementById('leagueFilter'),
+            probabilityFilter: document.getElementById('probabilityFilter'),
+            refreshBtn: document.getElementById('refreshBtn'),
+            darkModeToggle: document.getElementById('darkModeToggle')
+        };
+
+        // Event Listeners
+        elements.inplayTab.addEventListener('click', () => switchTab('inplay'));
+        elements.upcomingTab.addEventListener('click', () => switchTab('upcoming'));
+        elements.leagueFilter.addEventListener('change', filterMatches);
+        elements.probabilityFilter.addEventListener('change', filterMatches);
+        elements.refreshBtn.addEventListener('click', fetchMatches);
+        elements.darkModeToggle.addEventListener('click', toggleDarkMode);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
             fetchMatches();
+            startAutoRefresh();
         });
 
-        document.getElementById('upcomingTab').addEventListener('click', () => {
-            currentTab = 'upcoming';
+        function switchTab(tab) {
+            currentTab = tab;
             updateActiveTab();
             fetchMatches();
-        });
+        }
 
         function updateActiveTab() {
-            document.getElementById('inplayTab').className = 
+            elements.inplayTab.className = 
                 `px-4 py-2 font-medium ${currentTab === 'inplay' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`;
-            document.getElementById('upcomingTab').className = 
+            elements.upcomingTab.className = 
                 `px-4 py-2 font-medium ${currentTab === 'upcoming' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`;
         }
 
         function fetchMatches() {
-            const loadingElement = document.getElementById('loading');
-            const matchesContainer = document.getElementById('matchesContainer');
+            elements.loading.classList.remove('hidden');
+            elements.errorMessage.classList.add('hidden');
             
-            loadingElement.classList.remove('hidden');
-            matchesContainer.innerHTML = '';
-            
+            const today = new Date().toISOString().split('T')[0];
             const url = currentTab === 'inplay' 
                 ? 'https://v3.football.api-sports.io/fixtures?live=all&timezone=Europe/London'
-                : 'https://v3.football.api-sports.io/fixtures?date=' + getTodayDate() + '&timezone=Europe/London';
+                : `https://v3.football.api-sports.io/fixtures?date=${today}&timezone=Europe/London`;
             
             axios.get(url, {
                 headers: {
@@ -85,33 +176,62 @@
                 }
             })
             .then(response => {
-                displayMatches(response.data.response);
+                allMatches = response.data.response || [];
+                updateLeagueFilter();
+                filterMatches();
             })
             .catch(error => {
-                matchesContainer.innerHTML = `
-                    <div class="p-4 text-center text-red-500">
-                        Error loading matches. Please try again later.
-                    </div>
-                `;
+                showError('Error loading matches. Please try again later.');
                 console.error('Error:', error);
             })
             .finally(() => {
-                loadingElement.classList.add('hidden');
+                elements.loading.classList.add('hidden');
             });
         }
 
-        function getTodayDate() {
-            const today = new Date();
-            return today.toISOString().split('T')[0];
+        function updateLeagueFilter() {
+            const leagues = [...new Set(allMatches.map(match => match.league.name))].sort();
+            elements.leagueFilter.innerHTML = '<option value="all">All Leagues</option>' + 
+                leagues.map(league => `<option value="${league}">${league}</option>`).join('');
+        }
+
+        function filterMatches() {
+            const selectedLeague = elements.leagueFilter.value;
+            const minProbability = parseInt(elements.probabilityFilter.value) || 0;
+            
+            let filteredMatches = allMatches;
+            
+            // Filter by league
+            if (selectedLeague !== 'all') {
+                filteredMatches = filteredMatches.filter(match => match.league.name === selectedLeague);
+            }
+            
+            // Filter by probability (we'll simulate this since we don't have real probability data)
+            filteredMatches = filteredMatches.map(match => {
+                // Simulate probabilities for demo purposes
+                const isLive = match.fixture.status.long === 'Match Started';
+                const baseProb = isLive ? 50 : 40;
+                const homeStrength = match.teams.home.id % 30;
+                const awayStrength = match.teams.away.id % 30;
+                
+                match.probabilities = {
+                    firstHalf: Math.min(95, Math.max(5, baseProb + homeStrength - awayStrength + (Math.random() * 10 - 5))),
+                    secondHalf: Math.min(95, Math.max(5, baseProb + 10 + homeStrength - awayStrength + (Math.random() * 10 - 5)))
+                };
+                return match;
+            }).filter(match => 
+                match.probabilities.firstHalf >= minProbability || 
+                match.probabilities.secondHalf >= minProbability
+            );
+            
+            displayMatches(filteredMatches);
         }
 
         function displayMatches(matches) {
-            const matchesContainer = document.getElementById('matchesContainer');
-            
             if (!matches || matches.length === 0) {
-                matchesContainer.innerHTML = `
-                    <div class="p-4 text-center">
-                        No matches found for this category.
+                elements.matchesContainer.innerHTML = `
+                    <div class="p-6 text-center text-gray-500">
+                        No matches found matching your criteria.
                     </div>
                 `;
                 return;
@@ -119,12 +239,14 @@
 
             // Create header row
             let html = `
-                <div class="grid grid-cols-12 bg-gray-800 text-white p-3 font-medium">
-                    <div class="col-span-4">Match</div>
-                    <div class="col-span-2 text-center">Time</div>
+                <div class="grid grid-cols-12 bg-blue-600 text-white p-3 font-medium">
+                    <div class="col-span-3">Match</div>
+                    <div class="col-span-1 text-center">Time</div>
+                    <div class="col-span-1 text-center">Score</div>
                     <div class="col-span-2 text-center">1st Half Goal</div>
                     <div class="col-span-2 text-center">2nd Half Goal</div>
-                    <div class="col-span-2 text-center">Status</div>
+                    <div class="col-span-2 text-center">Match Time</div>
+                    <div class="col-span-1 text-center">Status</div>
                 </div>
             `;
 
@@ -135,36 +257,98 @@
                 const awayTeam = match.teams.away.name;
                 const matchTime = new Date(match.fixture.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const status = match.fixture.status.long;
+                const elapsed = match.fixture.status.elapsed;
+                const homeScore = match.goals.home;
+                const awayScore = match.goals.away;
                 
-                // Calculate probabilities (simplified - you should improve this)
-                const firstHalfProb = isLive ? Math.floor(Math.random() * 30 + 40) : Math.floor(Math.random() * 30 + 35);
-                const secondHalfProb = isLive ? Math.floor(Math.random() * 30 + 50) : Math.floor(Math.random() * 30 + 45);
-
+                // Get probabilities (from our simulated data)
+                const firstHalfProb = Math.round(match.probabilities.firstHalf);
+                const secondHalfProb = Math.round(match.probabilities.secondHalf);
+                
+                // Determine probability classes
+                const firstHalfClass = getProbabilityClass(firstHalfProb);
+                const secondHalfClass = getProbabilityClass(secondHalfProb);
+                
+                // Match time display
+                let matchTimeDisplay = '-';
+                if (isLive && elapsed) {
+                    matchTimeDisplay = `${elapsed}'`;
+                } else if (match.fixture.status.short === 'HT') {
+                    matchTimeDisplay = 'HT';
+                } else if (match.fixture.status.short === 'FT') {
+                    matchTimeDisplay = 'FT';
+                }
+                
+                // Score display
+                let scoreDisplay = '-';
+                if (homeScore !== null && awayScore !== null) {
+                    scoreDisplay = `${homeScore} - ${awayScore}`;
+                }
+                
+                // Team logos (API-Football provides these)
+                const homeLogo = `https://media.api-sports.io/football/teams/${match.teams.home.id}.png`;
+                const awayLogo = `https://media.api-sports.io/football/teams/${match.teams.away.id}.png`;
+                
                 html += `
-                    <div class="grid grid-cols-12 p-3 border-b hover:bg-gray-50">
-                        <div class="col-span-4">
-                            <div class="font-medium">${homeTeam} vs ${awayTeam}</div>
-                            <div class="text-sm text-gray-500">${match.league.name}</div>
+                    <div class="grid grid-cols-12 p-3 border-b match-row ${isLive ? 'bg-blue-50' : ''}">
+                        <div class="col-span-3 flex items-center">
+                            <img src="${homeLogo}" alt="${homeTeam}" class="h-6 mr-2" onerror="this.style.display='none'">
+                            <span class="font-medium">${homeTeam}</span>
+                            <span class="mx-2">vs</span>
+                            <img src="${awayLogo}" alt="${awayTeam}" class="h-6 mr-2" onerror="this.style.display='none'">
+                            <span class="font-medium">${awayTeam}</span>
                         </div>
-                        <div class="col-span-2 text-center self-center">${matchTime}</div>
-                        <div class="col-span-2 text-center self-center font-bold">${firstHalfProb}%</div>
-                        <div class="col-span-2 text-center self-center font-bold">${secondHalfProb}%</div>
-                        <div class="col-span-2 text-center self-center">
+                        <div class="col-span-1 text-center self-center">${matchTime}</div>
+                        <div class="col-span-1 text-center self-center font-bold ${isLive ? 'text-blue-600' : ''}">${scoreDisplay}</div>
+                        <div class="col-span-2 text-center self-center ${firstHalfClass}">${firstHalfProb}%</div>
+                        <div class="col-span-2 text-center self-center ${secondHalfClass}">${secondHalfProb}%</div>
+                        <div class="col-span-2 text-center self-center font-medium ${isLive ? 'text-blue-600' : ''}">${matchTimeDisplay}</div>
+                        <div class="col-span-1 text-center self-center">
                             <span class="px-2 py-1 rounded text-xs ${
-                                isLive ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                isLive ? 'bg-green-100 text-green-800 live-pulse' : 
+                                status === 'Not Started' ? 'bg-blue-100 text-blue-800' : 
+                                'bg-gray-100 text-gray-800'
                             }">${status}</span>
                         </div>
                     </div>
                 `;
             });
 
-            matchesContainer.innerHTML = html;
+            elements.matchesContainer.innerHTML = html;
         }
 
-        // Load in-play matches by default
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchMatches();
-        });
+        function getProbabilityClass(probability) {
+            if (probability >= 70) return 'probability-high';
+            if (probability >= 50) return 'probability-medium';
+            return 'probability-low';
+        }
+
+        function showError(message) {
+            elements.errorMessage.textContent = message;
+            elements.errorMessage.classList.remove('hidden');
+        }
+
+        function startAutoRefresh() {
+            clearInterval(autoRefreshInterval);
+            if (currentTab === 'inplay') {
+                autoRefreshInterval = setInterval(fetchMatches, 30000); // 30 seconds
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            elements.darkModeToggle.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+            
+            // Save preference to localStorage
+            localStorage.setItem('darkMode', isDark);
+        }
+
+        // Check for saved dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            elements.darkModeToggle.textContent = 'Light Mode';
+        }
     </script>
 </body>
 </html>
