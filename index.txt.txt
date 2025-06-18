@@ -164,7 +164,7 @@
 
     <script>
         // ======================== CONFIGURATION ========================
-        const API_KEY = 'rXhqP7FGyE2Bcvs4A9FiLQ';
+        const API_KEY = '5be43ef827a4055df3313de6a8131d8e';
         const TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const SEASON = new Date().getFullYear();
 
