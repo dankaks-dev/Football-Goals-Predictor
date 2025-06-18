@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Football Predictor Pro | Live & Pre-match Analysis</title>
+    <title>Football Predictor Pro | Pre-match Analysis</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -27,13 +27,6 @@
             background-color: #1e293b;
             border-color: #334155;
         }
-        .pulse-animation {
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
         .probability-100 { color: var(--success); font-weight: 700; }
         .probability-90 { color: #16a34a; font-weight: 600; }
         .probability-80 { color: #22c55e; font-weight: 600; }
@@ -52,10 +45,6 @@
             background: var(--primary);
             transition: all 0.3s ease;
         }
-        .live-badge {
-            background: linear-gradient(135deg, #ef4444, #f59e0b);
-            color: white;
-        }
     </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -67,7 +56,7 @@
                     <i class="fas fa-futbol mr-2"></i> Football Predictor Pro
                 </h1>
                 <p class="text-gray-600 dark:text-gray-400 mt-1">
-                    Live match predictions & statistical analysis
+                    Pre-match predictions & statistical analysis
                 </p>
             </div>
             <div class="flex items-center gap-3">
@@ -86,20 +75,11 @@
         <!-- Main Navigation Tabs -->
         <div class="relative mb-8">
             <div class="flex overflow-x-auto pb-1 scrollbar-hide">
-                <button id="inplayTab" class="px-4 py-3 font-medium whitespace-nowrap relative text-blue-600">
-                    <i class="fas fa-tv mr-2"></i> Live Matches
+                <button id="upcomingTab" class="px-4 py-3 font-medium whitespace-nowrap relative text-blue-600">
+                    <i class="far fa-clock mr-2"></i> Upcoming Matches
                 </button>
-                <button id="upcomingTab" class="px-4 py-3 font-medium whitespace-nowrap relative text-gray-500">
-                    <i class="far fa-clock mr-2"></i> Upcoming
-                </button>
-                <button id="firstHalfTab" class="px-4 py-3 font-medium whitespace-nowrap relative text-gray-500">
-                    <i class="fas fa-1 mr-2"></i> 1st Half
-                </button>
-                <button id="secondHalfTab" class="px-4 py-3 font-medium whitespace-nowrap relative text-gray-500">
-                    <i class="fas fa-2 mr-2"></i> 2nd Half
-                </button>
-                <button id="trendsTab" class="px-4 py-3 font-medium whitespace-nowrap relative text-gray-500">
-                    <i class="fas fa-chart-line mr-2"></i> Trends
+                <button id="predictionsTab" class="px-4 py-3 font-medium whitespace-nowrap relative text-gray-500">
+                    <i class="fas fa-chart-line mr-2"></i> Detailed Predictions
                 </button>
                 <div class="tab-indicator"></div>
             </div>
@@ -114,14 +94,25 @@
                 </select>
             </div>
             <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm font-medium mb-1 dark:text-gray-300">Probability</label>
-                <select id="probabilityFilter" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-700 dark:border-slate-600">
+                <label class="block text-sm font-medium mb-1 dark:text-gray-300">1st Half Goals</label>
+                <select id="firstHalfFilter" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-700 dark:border-slate-600">
+                    <option value="0">Any probability</option>
                     <option value="50">50%+</option>
                     <option value="60">60%+</option>
                     <option value="70">70%+</option>
                     <option value="80">80%+</option>
                     <option value="90">90%+</option>
-                    <option value="100">100% (Sure Bets)</option>
+                </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium mb-1 dark:text-gray-300">2nd Half Goals</label>
+                <select id="secondHalfFilter" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-700 dark:border-slate-600">
+                    <option value="0">Any probability</option>
+                    <option value="50">50%+</option>
+                    <option value="60">60%+</option>
+                    <option value="70">70%+</option>
+                    <option value="80">80%+</option>
+                    <option value="90">90%+</option>
                 </select>
             </div>
             <div class="flex-1 min-w-[200px]">
@@ -137,17 +128,6 @@
                 <i class="fas fa-sync-alt"></i>
                 <span class="hidden sm:inline">Refresh</span>
             </button>
-        </div>
-
-        <!-- Status Bar -->
-        <div id="statusBar" class="bg-blue-50 dark:bg-slate-700 rounded-lg p-3 mb-6 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div id="liveStatus" class="w-3 h-3 rounded-full bg-red-500 pulse-animation"></div>
-                <span class="text-sm font-medium dark:text-gray-300">Live data connected</span>
-            </div>
-            <div id="statsSummary" class="text-sm text-gray-600 dark:text-gray-400">
-                <span id="matchCount">0</span> matches • <span id="highProbCount">0</span> high probability
-            </div>
         </div>
 
         <!-- Loading State -->
@@ -171,7 +151,7 @@
 
         <!-- Main Content -->
         <div id="contentArea">
-            <!-- Matches Grid will be inserted here by JavaScript -->
+            <!-- Content will be inserted here by JavaScript -->
         </div>
 
         <!-- Match Detail Modal (hidden by default) -->
@@ -184,31 +164,27 @@
 
     <script>
         // ======================== CONFIGURATION ========================
-        const API_KEY = 'fe4bea7daee902d762bd992aa5c0ba3e';
+        const API_KEY = 'rXhqP7FGyE2Bcvs4A9FiLQ';
         const TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const SEASON = new Date().getFullYear();
-        const REFRESH_INTERVAL = 30000; // 30 seconds
 
         // ======================== APP STATE ========================
-        let currentTab = 'inplay';
+        let currentTab = 'upcoming';
         let allMatches = [];
         let allPredictions = {};
         let historicalDataCache = {};
-        let refreshTimer;
         let lastUpdated = new Date();
 
         // ======================== DOM ELEMENTS ========================
         const elements = {
             // Tabs
-            inplayTab: document.getElementById('inplayTab'),
             upcomingTab: document.getElementById('upcomingTab'),
-            firstHalfTab: document.getElementById('firstHalfTab'),
-            secondHalfTab: document.getElementById('secondHalfTab'),
-            trendsTab: document.getElementById('trendsTab'),
+            predictionsTab: document.getElementById('predictionsTab'),
             
             // Filters
             leagueFilter: document.getElementById('leagueFilter'),
-            probabilityFilter: document.getElementById('probabilityFilter'),
+            firstHalfFilter: document.getElementById('firstHalfFilter'),
+            secondHalfFilter: document.getElementById('secondHalfFilter'),
             timeFilter: document.getElementById('timeFilter'),
             refreshBtn: document.getElementById('refreshBtn'),
             
@@ -219,10 +195,6 @@
             errorTitle: document.getElementById('errorTitle'),
             errorText: document.getElementById('errorText'),
             contentArea: document.getElementById('contentArea'),
-            statusBar: document.getElementById('statusBar'),
-            liveStatus: document.getElementById('liveStatus'),
-            matchCount: document.getElementById('matchCount'),
-            highProbCount: document.getElementById('highProbCount'),
             lastUpdated: document.getElementById('lastUpdated'),
             matchModal: document.getElementById('matchModal')
         };
@@ -232,7 +204,6 @@
             setupEventListeners();
             checkDarkModePreference();
             fetchData();
-            startAutoRefresh();
             updateLastUpdated();
         });
 
@@ -244,13 +215,7 @@
                 clearError();
                 
                 const today = new Date().toISOString().split('T')[0];
-                let url;
-                
-                if (currentTab === 'inplay') {
-                    url = `https://v3.football.api-sports.io/fixtures?live=all&timezone=${TIMEZONE}`;
-                } else {
-                    url = `https://v3.football.api-sports.io/fixtures?date=${today}&timezone=${TIMEZONE}`;
-                }
+                const url = `https://v3.football.api-sports.io/fixtures?date=${today}&timezone=${TIMEZONE}`;
                 
                 const response = await axios.get(url, {
                     headers: { 'x-apisports-key': API_KEY },
@@ -258,12 +223,7 @@
                 });
                 
                 allMatches = response.data.response || [];
-                processMatchData();
-                
-                if (currentTab !== 'inplay') {
-                    await fetchDetailedPredictions();
-                }
-                
+                await fetchDetailedPredictions();
                 updateUI();
                 
             } catch (error) {
@@ -278,7 +238,6 @@
             try {
                 allPredictions = {};
                 
-                // Fetch additional data for predictions
                 await Promise.all(allMatches.map(async match => {
                     if (match.fixture.status.short !== 'NS') return;
                     
@@ -302,73 +261,295 @@
         }
 
         function calculateAdvancedPrediction(match, homeStats, awayStats, h2h) {
-            // [Previous advanced prediction logic]
-            // Enhanced with more factors:
-            // 1. Recent form (last 5 matches)
-            // 2. Home/away performance differentials
-            // 3. Head-to-head trends
-            // 4. Team motivation (league position difference)
-            // 5. Time since last match (fatigue factor)
-            // 6. Weather conditions (if available)
+            // Base probabilities
+            let firstHalfProb = 45;
+            let secondHalfProb = 55;
+            const factors = [];
             
-            // Returns prediction object with:
-            // - firstHalf: number (50-100)
-            // - secondHalf: number (50-100)
-            // - confidence: number (1-5 stars)
-            // - keyFactors: string[]
+            // 1. Team form analysis
+            if (homeStats && awayStats) {
+                const homeForm = homeStats.form.split('').filter(r => r === 'W').length / 5;
+                const awayForm = awayStats.form.split('').filter(r => r === 'L').length / 5;
+                
+                firstHalfProb += homeForm * 10 - awayForm * 5;
+                secondHalfProb += homeForm * 12 - awayForm * 6;
+                factors.push(`Home form: ${(homeForm * 100).toFixed(0)}% wins, Away form: ${(awayForm * 100).toFixed(0)}% losses`);
+            }
+            
+            // 2. Goal scoring/conceding trends
+            if (homeStats && awayStats) {
+                const homeGoalsFor = homeStats.goals.for.average.total;
+                const homeGoalsAgainst = homeStats.goals.against.average.total;
+                const awayGoalsFor = awayStats.goals.for.average.total;
+                const awayGoalsAgainst = awayStats.goals.against.average.total;
+                
+                firstHalfProb += (homeGoalsFor * 0.7 + awayGoalsAgainst * 0.7 - homeGoalsAgainst * 0.3 - awayGoalsFor * 0.3);
+                secondHalfProb += (homeGoalsFor * 0.8 + awayGoalsAgainst * 0.8 - homeGoalsAgainst * 0.2 - awayGoalsFor * 0.2);
+                factors.push(`Home scores ${homeGoalsFor.toFixed(1)}/match, concedes ${homeGoalsAgainst.toFixed(1)} | Away scores ${awayGoalsFor.toFixed(1)}, concedes ${awayGoalsAgainst.toFixed(1)}`);
+            }
+            
+            // 3. Head-to-head history
+            if (h2h && h2h.length > 0) {
+                let h2hFirstHalfGoals = 0;
+                let h2hSecondHalfGoals = 0;
+                
+                h2h.forEach(fixture => {
+                    if (fixture.score.halftime.home !== null) {
+                        h2hFirstHalfGoals += fixture.score.halftime.home + fixture.score.halftime.away;
+                    }
+                    if (fixture.score.fulltime.home !== null && fixture.score.halftime.home !== null) {
+                        h2hSecondHalfGoals += (fixture.score.fulltime.home - fixture.score.halftime.home) + 
+                                              (fixture.score.fulltime.away - fixture.score.halftime.away);
+                    }
+                });
+                
+                const avgFirstHalf = h2hFirstHalfGoals / h2hStats.length;
+                const avgSecondHalf = h2hSecondHalfGoals / h2hStats.length;
+                
+                firstHalfProb += (avgFirstHalf - 1.2) * 10;
+                secondHalfProb += (avgSecondHalf - 1.3) * 10;
+                factors.push(`H2H: ${avgFirstHalf.toFixed(1)} 1H goals, ${avgSecondHalf.toFixed(1)} 2H goals in last ${h2hStats.length} meetings`);
+            }
+            
+            // 4. Home/Away performance
+            if (homeStats && awayStats) {
+                const homeHomeStrength = homeStats.goals.for.average.home - homeStats.goals.against.average.home;
+                const awayAwayWeakness = awayStats.goals.against.average.away - awayStats.goals.for.average.away;
+                
+                firstHalfProb += homeHomeStrength * 3 + awayAwayWeakness * 2;
+                secondHalfProb += homeHomeStrength * 4 + awayAwayWeakness * 3;
+                factors.push(`Home team is ${homeHomeStrength > 0 ? 'strong' : 'weak'} at home, Away team is ${awayAwayWeakness > 0 ? 'weak' : 'strong'} away`);
+            }
+            
+            // Ensure probabilities are within reasonable bounds
+            firstHalfProb = Math.max(20, Math.min(95, firstHalfProb));
+            secondHalfProb = Math.max(30, Math.min(95, secondHalfProb));
+            
+            return {
+                firstHalf: Math.round(firstHalfProb),
+                secondHalf: Math.round(secondHalfProb),
+                factors: factors,
+                confidence: calculateConfidence(firstHalfProb, secondHalfProb)
+            };
+        }
+
+        function calculateConfidence(firstHalf, secondHalf) {
+            const avg = (firstHalf + secondHalf) / 2;
+            if (avg >= 80) return 5;
+            if (avg >= 70) return 4;
+            if (avg >= 60) return 3;
+            if (avg >= 50) return 2;
+            return 1;
+        }
+
+        function generateFallbackPrediction(match) {
+            // Simple fallback when detailed stats aren't available
+            const baseProb = 45 + (match.teams.home.id % 20) - (match.teams.away.id % 15);
+            return {
+                firstHalf: Math.max(40, Math.min(80, baseProb)),
+                secondHalf: Math.max(45, Math.min(85, baseProb + 5)),
+                factors: ['Basic prediction (detailed stats unavailable)'],
+                confidence: 2
+            };
         }
 
         function updateUI() {
-            // [Previous UI update logic]
-            // Enhanced with:
-            // - Better match cards layout
-            // - Confidence indicators
-            // - Quick action buttons
-            // - Improved sorting
+            if (currentTab === 'predictions') {
+                showDetailedPredictions();
+            } else {
+                showUpcomingMatches();
+            }
         }
 
-        // ======================== ENHANCED FEATURES ========================
-
-        // 1. Dynamic Odds Calculation
-        function calculateDynamicOdds(match) {
-            // Adjusts predictions based on in-game events
+        function showUpcomingMatches() {
+            const leagueFilter = elements.leagueFilter.value;
+            const firstHalfMin = parseInt(elements.firstHalfFilter.value) || 0;
+            const secondHalfMin = parseInt(elements.secondHalfFilter.value) || 0;
+            const timeFilter = elements.timeFilter.value;
+            
+            let filteredMatches = allMatches.filter(match => {
+                // Only upcoming matches
+                if (match.fixture.status.short !== 'NS') return false;
+                
+                // League filter
+                if (leagueFilter !== 'all' && match.league.name !== leagueFilter) return false;
+                
+                // Time filter
+                const matchHour = new Date(match.fixture.date).getHours();
+                if (timeFilter === 'morning' && (matchHour < 6 || matchHour >= 12)) return false;
+                if (timeFilter === 'afternoon' && (matchHour < 12 || matchHour >= 18)) return false;
+                if (timeFilter === 'evening' && (matchHour < 18 || matchHour >= 24)) return false;
+                
+                // Probability filters
+                const prediction = allPredictions[match.fixture.id] || generateFallbackPrediction(match);
+                if (firstHalfMin > 0 && prediction.firstHalf < firstHalfMin) return false;
+                if (secondHalfMin > 0 && prediction.secondHalf < secondHalfMin) return false;
+                
+                return true;
+            });
+            
+            // Sort by kickoff time
+            filteredMatches.sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
+            
+            renderMatches(filteredMatches, 'upcoming');
         }
 
-        // 2. Live Match Momentum Tracker
-        function trackMatchMomentum(match) {
-            // Calculates which team has momentum based on:
-            // - Recent shots
-            // - Possession changes
-            // - Substitutions
-            // - Cards/incidents
+        function showDetailedPredictions() {
+            let filteredMatches = allMatches.filter(match => match.fixture.status.short === 'NS');
+            
+            // Sort by confidence then time
+            filteredMatches.sort((a, b) => {
+                const predA = allPredictions[a.fixture.id] || generateFallbackPrediction(a);
+                const predB = allPredictions[b.fixture.id] || generateFallbackPrediction(b);
+                const confidenceDiff = predB.confidence - predA.confidence;
+                if (confidenceDiff !== 0) return confidenceDiff;
+                return new Date(a.fixture.date) - new Date(b.fixture.date);
+            });
+            
+            renderMatches(filteredMatches, 'detailed');
         }
 
-        // 3. Value Bet Detector
-        function findValueBets() {
-            // Identifies predictions where our probability differs significantly
-            // from bookmaker odds (potential value bets)
+        function renderMatches(matches, viewType) {
+            if (matches.length === 0) {
+                elements.contentArea.innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <i class="fas fa-info-circle text-2xl mb-2"></i>
+                        <p>No matches found matching your criteria</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            if (viewType === 'upcoming') {
+                html = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${matches.map(match => {
+                            const prediction = allPredictions[match.fixture.id] || generateFallbackPrediction(match);
+                            const matchTime = new Date(match.fixture.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const homeLogo = `https://media.api-sports.io/football/teams/${match.teams.home.id}.png`;
+                            const awayLogo = `https://media.api-sports.io/football/teams/${match.teams.away.id}.png`;
+                            
+                            return `
+                                <div class="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-4 match-card">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <span class="text-sm font-medium text-gray-500 dark:text-gray-400">${match.league.name}</span>
+                                        <span class="text-sm font-medium">${matchTime}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="flex items-center gap-2">
+                                            <img src="${homeLogo}" alt="${match.teams.home.name}" class="h-8" onerror="this.style.display='none'">
+                                            <span class="font-medium">${match.teams.home.name}</span>
+                                        </div>
+                                        <span class="mx-2 text-gray-400">vs</span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-medium">${match.teams.away.name}</span>
+                                            <img src="${awayLogo}" alt="${match.teams.away.name}" class="h-8" onerror="this.style.display='none'">
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="text-center p-2 rounded ${getProbabilityClass(prediction.firstHalf)}">
+                                            <div class="text-xl font-bold">${prediction.firstHalf}%</div>
+                                            <div class="text-xs">1st Half Goal</div>
+                                        </div>
+                                        <div class="text-center p-2 rounded ${getProbabilityClass(prediction.secondHalf)}">
+                                            <div class="text-xl font-bold">${prediction.secondHalf}%</div>
+                                            <div class="text-xs">2nd Half Goal</div>
+                                        </div>
+                                    </div>
+                                    <button onclick="showMatchDetails(${match.fixture.id})" class="mt-3 w-full py-1.5 text-sm bg-blue-50 hover:bg-blue-100 dark:bg-slate-700 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-400 rounded transition">
+                                        View Analysis
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            } else {
+                html = `
+                    <div class="space-y-4">
+                        ${matches.map(match => {
+                            const prediction = allPredictions[match.fixture.id] || generateFallbackPrediction(match);
+                            const matchTime = new Date(match.fixture.date).toLocaleString();
+                            const homeLogo = `https://media.api-sports.io/football/teams/${match.teams.home.id}.png`;
+                            const awayLogo = `https://media.api-sports.io/football/teams/${match.teams.away.id}.png`;
+                            const stars = '★'.repeat(prediction.confidence) + '☆'.repeat(5 - prediction.confidence);
+                            
+                            return `
+                                <div class="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-4">
+                                    <div class="flex flex-col sm:flex-row justify-between gap-4">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">${match.league.name}</span>
+                                                <span class="text-yellow-500">${stars}</span>
+                                            </div>
+                                            <div class="flex items-center justify-center gap-4 mb-3">
+                                                <div class="flex items-center gap-2">
+                                                    <img src="${homeLogo}" alt="${match.teams.home.name}" class="h-8" onerror="this.style.display='none'">
+                                                    <span class="font-medium">${match.teams.home.name}</span>
+                                                </div>
+                                                <span class="text-gray-400">vs</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-medium">${match.teams.away.name}</span>
+                                                    <img src="${awayLogo}" alt="${match.teams.away.name}" class="h-8" onerror="this.style.display='none'">
+                                                </div>
+                                            </div>
+                                            <div class="text-sm text-gray-500 dark:text-gray-400 text-center mb-3">
+                                                <i class="far fa-clock mr-1"></i> ${matchTime}
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col sm:flex-row gap-4">
+                                            <div class="text-center p-3 rounded-lg ${getProbabilityClass(prediction.firstHalf)}" style="min-width: 80px;">
+                                                <div class="text-2xl font-bold">${prediction.firstHalf}%</div>
+                                                <div class="text-xs mt-1">1st Half Goal</div>
+                                            </div>
+                                            <div class="text-center p-3 rounded-lg ${getProbabilityClass(prediction.secondHalf)}" style="min-width: 80px;">
+                                                <div class="text-2xl font-bold">${prediction.secondHalf}%</div>
+                                                <div class="text-xs mt-1">2nd Half Goal</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+                                        <h4 class="font-medium mb-2">Key Factors:</h4>
+                                        <ul class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                                            ${prediction.factors.map(factor => `<li class="flex items-start gap-2"><i class="fas fa-circle text-xs mt-1.5 opacity-50"></i> ${factor}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                    <div class="mt-4 flex justify-end">
+                                        <button onclick="showMatchChart(${match.fixture.id})" class="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                                            <i class="fas fa-chart-bar"></i> View Trends
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+            
+            elements.contentArea.innerHTML = html;
         }
 
-        // 4. Streak Analyzer
-        function analyzeStreaks(match) {
-            // Detects team scoring/conceding streaks that might continue
+        function getProbabilityClass(probability) {
+            if (probability >= 90) return 'probability-90 bg-green-50 dark:bg-green-900/20';
+            if (probability >= 80) return 'probability-80 bg-green-50 dark:bg-green-900/20';
+            if (probability >= 70) return 'probability-70 bg-green-50 dark:bg-green-900/20';
+            if (probability >= 60) return 'probability-60 bg-yellow-50 dark:bg-yellow-900/20';
+            return 'probability-50 bg-orange-50 dark:bg-orange-900/20';
         }
 
         // ======================== HELPER FUNCTIONS ========================
-        // [All previous helper functions]
-        // Plus new ones for enhanced features
 
         function setupEventListeners() {
             // Tab switches
-            elements.inplayTab.addEventListener('click', () => switchTab('inplay'));
             elements.upcomingTab.addEventListener('click', () => switchTab('upcoming'));
-            elements.firstHalfTab.addEventListener('click', () => switchTab('firstHalf'));
-            elements.secondHalfTab.addEventListener('click', () => switchTab('secondHalf'));
-            elements.trendsTab.addEventListener('click', () => switchTab('trends'));
+            elements.predictionsTab.addEventListener('click', () => switchTab('predictions'));
             
             // Filter changes
             elements.leagueFilter.addEventListener('change', updateUI);
-            elements.probabilityFilter.addEventListener('change', updateUI);
+            elements.firstHalfFilter.addEventListener('change', updateUI);
+            elements.secondHalfFilter.addEventListener('change', updateUI);
             elements.timeFilter.addEventListener('change', updateUI);
             
             // Refresh button
@@ -380,12 +561,225 @@
 
         function switchTab(tab) {
             currentTab = tab;
-            updateTabIndicator();
-            fetchData();
+            
+            // Update tab styles
+            elements.upcomingTab.classList.toggle('text-blue-600', tab === 'upcoming');
+            elements.upcomingTab.classList.toggle('text-gray-500', tab !== 'upcoming');
+            elements.predictionsTab.classList.toggle('text-blue-600', tab === 'predictions');
+            elements.predictionsTab.classList.toggle('text-gray-500', tab !== 'predictions');
+            
+            updateUI();
         }
 
-        function updateTabIndicator() {
-            // Moves the animated tab indicator to the active tab
+        function showLoading() {
+            elements.loading.classList.remove('hidden');
+            elements.contentArea.innerHTML = '';
+        }
+
+        function hideLoading() {
+            elements.loading.classList.add('hidden');
+        }
+
+        function clearError() {
+            elements.errorMessage.classList.add('hidden');
+        }
+
+        function handleFetchError(error) {
+            elements.errorTitle.textContent = 'Data Loading Error';
+            elements.errorText.textContent = error.message || 'Failed to fetch match data. Please check your connection and try again.';
+            elements.errorMessage.classList.remove('hidden');
+        }
+
+        function updateLastUpdated() {
+            lastUpdated = new Date();
+            elements.lastUpdated.textContent = `Updated: ${lastUpdated.toLocaleTimeString()}`;
+        }
+
+        function checkDarkModePreference() {
+            if (localStorage.getItem('darkMode') === 'true' || 
+                (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.body.classList.add('dark-mode');
+                elements.darkModeToggle.innerHTML = '<i class="fas fa-sun"></i><span class="hidden sm:inline"> Light</span>';
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            elements.darkModeToggle.innerHTML = isDark 
+                ? '<i class="fas fa-sun"></i><span class="hidden sm:inline"> Light</span>'
+                : '<i class="fas fa-moon"></i><span class="hidden sm:inline"> Dark</span>';
+        }
+
+        async function getTeamStats(leagueId, teamId) {
+            const cacheKey = `stats-${leagueId}-${teamId}`;
+            if (historicalDataCache[cacheKey]) return historicalDataCache[cacheKey];
+            
+            try {
+                const response = await axios.get(
+                    `https://v3.football.api-sports.io/teams/statistics?season=${SEASON}&team=${teamId}&league=${leagueId}`,
+                    { headers: { 'x-apisports-key': API_KEY } }
+                );
+                historicalDataCache[cacheKey] = response.data.response;
+                return response.data.response;
+            } catch (error) {
+                console.error(`Error fetching stats for team ${teamId}:`, error);
+                return null;
+            }
+        }
+
+        async function getHeadToHead(homeTeamId, awayTeamId) {
+            const cacheKey = `h2h-${homeTeamId}-${awayTeamId}`;
+            if (historicalDataCache[cacheKey]) return historicalDataCache[cacheKey];
+            
+            try {
+                const response = await axios.get(
+                    `https://v3.football.api-sports.io/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`,
+                    { headers: { 'x-apisports-key': API_KEY } }
+                );
+                historicalDataCache[cacheKey] = response.data.response;
+                return response.data.response;
+            } catch (error) {
+                console.error(`Error fetching H2H for ${homeTeamId}-${awayTeamId}:`, error);
+                return [];
+            }
+        }
+
+        // ======================== GLOBAL FUNCTIONS ========================
+
+        window.showMatchDetails = function(fixtureId) {
+            const match = allMatches.find(m => m.fixture.id === fixtureId);
+            if (!match) return;
+            
+            const prediction = allPredictions[fixtureId] || generateFallbackPrediction(match);
+            const homeLogo = `https://media.api-sports.io/football/teams/${match.teams.home.id}.png`;
+            const awayLogo = `https://media.api-sports.io/football/teams/${match.teams.away.id}.png`;
+            
+            elements.matchModal.innerHTML = `
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-xl font-bold">Match Analysis</h3>
+                        <button onclick="document.getElementById('matchModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-6">
+                        <div class="flex items-center gap-3">
+                            <img src="${homeLogo}" alt="${match.teams.home.name}" class="h-12" onerror="this.style.display='none'">
+                            <span class="font-bold text-lg">${match.teams.home.name}</span>
+                        </div>
+                        <div class="text-xl font-bold text-gray-500 dark:text-gray-400">vs</div>
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-lg">${match.teams.away.name}</span>
+                            <img src="${awayLogo}" alt="${match.teams.away.name}" class="h-12" onerror="this.style.display='none'">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                            <h4 class="font-bold mb-3 text-center">1st Half Goal Probability</h4>
+                            <div class="text-5xl font-bold text-center mb-2 ${getProbabilityClass(prediction.firstHalf)}">
+                                ${prediction.firstHalf}%
+                            </div>
+                            <canvas id="firstHalfChart" height="200"></canvas>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                            <h4 class="font-bold mb-3 text-center">2nd Half Goal Probability</h4>
+                            <div class="text-5xl font-bold text-center mb-2 ${getProbabilityClass(prediction.secondHalf)}">
+                                ${prediction.secondHalf}%
+                            </div>
+                            <canvas id="secondHalfChart" height="200"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 mb-4">
+                        <h4 class="font-bold mb-2">Key Prediction Factors</h4>
+                        <ul class="space-y-2">
+                            ${prediction.factors.map(factor => `
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+                                    <span>${factor}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                        <p><i class="far fa-clock mr-1"></i> Kickoff: ${new Date(match.fixture.date).toLocaleString()}</p>
+                        <p><i class="fas fa-trophy mr-1"></i> Competition: ${match.league.name}</p>
+                    </div>
+                </div>
+            `;
+            
+            // Show the modal
+            elements.matchModal.classList.remove('hidden');
+            
+            // Render charts
+            renderPredictionCharts(fixtureId);
+        };
+
+        window.showMatchChart = function(fixtureId) {
+            // [Chart rendering logic would go here]
+            alert('Detailed trend charts would appear here for match ID: ' + fixtureId);
+        };
+
+        function renderPredictionCharts(fixtureId) {
+            const match = allMatches.find(m => m.fixture.id === fixtureId);
+            if (!match) return;
+            
+            const prediction = allPredictions[fixtureId] || generateFallbackPrediction(match);
+            
+            // First Half Chart
+            const firstHalfCtx = document.getElementById('firstHalfChart').getContext('2d');
+            new Chart(firstHalfCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Goal', 'No Goal'],
+                    datasets: [{
+                        data: [prediction.firstHalf, 100 - prediction.firstHalf],
+                        backgroundColor: [
+                            prediction.firstHalf >= 70 ? '#10b981' : 
+                            prediction.firstHalf >= 50 ? '#f59e0b' : '#ef4444',
+                            '#e5e7eb'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+            
+            // Second Half Chart
+            const secondHalfCtx = document.getElementById('secondHalfChart').getContext('2d');
+            new Chart(secondHalfCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Goal', 'No Goal'],
+                    datasets: [{
+                        data: [prediction.secondHalf, 100 - prediction.secondHalf],
+                        backgroundColor: [
+                            prediction.secondHalf >= 70 ? '#10b981' : 
+                            prediction.secondHalf >= 50 ? '#f59e0b' : '#ef4444',
+                            '#e5e7eb'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
         }
     </script>
 </body>
