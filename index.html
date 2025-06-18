@@ -141,7 +141,7 @@
 
     <script>
         // ======================== CONFIGURATION ========================
-        const API_KEY = 'YOUR_API_KEY_HERE'; // REPLACE WITH YOUR API KEY
+        const API_KEY = '2216a37711324078a6ed1cf8f22870e5'; // REPLACE WITH YOUR API KEY
         const TIMEZONE = 'Europe/London';
         const SEASON = new Date().getFullYear(); // Current season
         
@@ -300,7 +300,8 @@
             
             const response = await axios.get(
                 `https://v3.football.api-sports.io/fixtures/headtohead?h2h=${homeTeamId}-${awayTeamId}&last=5`, 
-                { headers: { 'x-apisports-key': API_KEY '2216a37711324078a6ed1cf8f22870e5';
+                { headers: { 'x-apisports-key': API_KEY } }
+            );
             
             historicalDataCache[cacheKey] = response.data.response;
             return response.data.response;
